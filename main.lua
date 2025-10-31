@@ -1,34 +1,83 @@
 function _init()
+  spawn_acorn()
 	make_player()
+  make_enemy()
 	particles = {}
+  acorn_timer = 0
+  enemy_timer = 0
+  score = 0
 end
 
 function _update()
+  local dt = 1/30
+  acorn_timer += dt
+  enemy_timer += dt
+
+  if acorn_timer >= 4 then
+    spawn_acorn()
+    acorn_timer = 0
+  end
+
+  if enemy_timer >= 7 then
+    make_enemy()
+    enemy_timer = 0
+  end
+
+  if a then animate_acorn() end
+  if e then update_enemy() end
+
+  animate_acorn()
+	move_player()
   animate_player()
+
   if (btn(⬅️) or btn(➡️) or btn(⬆️) or btn(⬇️))  then
     p.running = true
   else
     p.running = false
   end
-
-	move_player()
 	update_particles()
+
+
+-- enemy grabs acorn
+  if collides(e, a) then
+    acorn_timer = 5
+    enemy_timer = 5
+    spawn_poof(e.x, e.y)
+    e = nil
+    a = nil
+    -- reset score if squirrel gets the acorn
+    score = 0
+  end
+
+-- player catches enemy
+  if e and collides(p, e) then
+    spawn_poof(e.x, e.y)
+    e = nil
+    enemy_timer = 6
+    score += 1
+  end
 end
+
 
 function _draw()
 	cls()
 	map(0, 0, 0, 0, 16, 16)
+  if p then spr(p.sprite, p.x, p.y, 1, 1, p.flip_x, false) end
+  if e then spr(e.sprite, e.x, e.y, 1, 1, e.flip_x, false) end
+  if a then spr(a.sprite, a.x, a.y, 1, 1, a.flip_x, false) end
 
-	-- draw player
-	spr(p.sprite, p.x, p.y, 1, 1, p.flip_x, false)
-  print(p.sprite)
-  print(p.running)
+  print("SCORE: "..score, 1, 1, 7)
+  print(enemy_timer)
+  -- print(p.x)
+  -- print(p.y)
+  -- print(p.sprite)
+  -- print(p.running)
 
 	-- draw particles after map, before UI
 	draw_particles()
 
 	-- debug + ui
-	debug_tiles(p.x, p.y)
+	-- debug_tiles(p.x, p.y)
 	draw_dash_cooldown()
 end
 
@@ -45,6 +94,22 @@ function debug_tiles(x, y)
 	-- print("L:"..left.."("..flag_left..")", 0, 0, 8)
 	-- print("C:"..here.."("..flag_here..")", 0, 6, 10)
 	-- print("R:"..right.."("..flag_right..")", 0, 12, 8)
+end
+
+function update_enemy()
+  if not e or not a then return end
+
+  local dx = a.x - e.x
+  local dy = a.y - e.y
+  local dist = sqrt(dx*dx + dy*dy)
+
+  if dist > 1 then
+    e.x += (dx / dist) * e.speed
+    e.y += (dy / dist) * e.speed
+  end
+
+  -- flip sprite based on direction
+  e.flip_x = dx < 0
 end
 
 -- 👤 PLAYER CREATION
@@ -67,6 +132,50 @@ function make_player()
     running = false
 	}
 
+end
+
+-- 👤 ENEMY CREATION
+function make_enemy()
+  local corner = flr(rnd(4))
+  local positions = {
+    {x=10, y=10},
+    {x=100, y=10},
+    {x=10, y=100},
+    {x=100, y=100},
+  }
+  local pos = positions[corner+1]
+	e = {
+		x = pos.x, y = pos.y, w = 7, h = 7,
+		dx = 0, dy = 0,
+    speed = 1,
+    running_animation_speed = 1.0,
+    sprite = 34,
+    flip_x = false
+	}
+
+end
+
+-- 👤 ACORNh CREATION
+function spawn_acorn()
+  x = flr(rnd(128-8)) -- subtract sprite size so it stays on-screen
+  y = flr(rnd(128-8))
+	a = {
+		x = x, y = y, w = 7, h = 7,
+		dx = 0, dy = 0,
+    idle_animation_speed = 0.3,
+    sprite = 50,
+	}
+
+end
+
+function animate_acorn()
+  if a then
+    if a.sprite < 57 then
+      a.sprite += a.idle_animation_speed
+    else
+      a.sprite = 50
+    end
+  end
 end
 
 function animate_player()
@@ -213,4 +322,25 @@ function wall_check(a)
 	elseif a.dy>0 then
 		if solid(a.x,a.y+a.h+1) or solid(a.x+a.w,a.y+a.h+1) then a.dy=0 end
 	end
+end
+
+
+function collides(a, b)
+  return a and b and
+    a.x < b.x + b.w and
+    b.x < a.x + a.w and
+    a.y < b.y + b.h and
+    b.y < a.y + a.h
+end
+
+function spawn_poof(x, y)
+  for i=1,6 do
+    add(particles, {
+      x=x, y=y,
+      dx=rnd(1)-0.5,
+      dy=rnd(1)-0.5,
+      life=0.5,
+      color=3
+    })
+  end
 end
