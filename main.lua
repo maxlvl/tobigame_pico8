@@ -40,6 +40,7 @@ function _update()
 
 -- enemy grabs acorn
   if collides(e, a) then
+    sfx(1, 1)
     acorn_timer = 5
     enemy_timer = 5
     spawn_poof(e.x, e.y)
@@ -51,6 +52,7 @@ function _update()
 
 -- player catches enemy
   if e and collides(p, e) then
+    sfx(0, 0)
     spawn_poof(e.x, e.y)
     e = nil
     enemy_timer = 6
