@@ -67,7 +67,8 @@ function _draw()
   if a then spr(a.sprite, a.x, a.y, 1, 1, a.flip_x, false) end
 
   print("SCORE: "..score, 1, 1, 7)
-  print(enemy_timer)
+  if e then print(e.dx) end
+  if e then print(e.dy) end
   -- print(p.x)
   -- print(p.y)
   -- print(p.sprite)
@@ -79,21 +80,6 @@ function _draw()
 	-- debug + ui
 	-- debug_tiles(p.x, p.y)
 	draw_dash_cooldown()
-end
-
--- 🧩 DEBUG TILE INSPECTOR
-function debug_tiles(x, y)
-	local map_x = flr(x / 8)
-	local map_y = flr(y / 8)
-	local left, right, here = mget(map_x - 1, map_y), mget(map_x + 1, map_y), mget(map_x, map_y)
-	local flag_left, flag_right, flag_here =
-		fget(left, 0) and 1 or 0,
-		fget(right, 0) and 1 or 0,
-		fget(here, 0) and 1 or 0
-
-	-- print("L:"..left.."("..flag_left..")", 0, 0, 8)
-	-- print("C:"..here.."("..flag_here..")", 0, 6, 10)
-	-- print("R:"..right.."("..flag_right..")", 0, 12, 8)
 end
 
 function update_enemy()
@@ -109,7 +95,15 @@ function update_enemy()
   end
 
   -- flip sprite based on direction
-  e.flip_x = dx < 0
+  e.flip_x = (a.x - e.x) > 0
+
+  -- running animation
+  e.anim_timer += e.anim_speed
+  if e.anim_timer >= 1 then
+    e.sprite += 1
+    if e.sprite > e.anim_end then e.sprite = e.anim_start end
+    e.anim_timer = 0
+  end
 end
 
 -- 👤 PLAYER CREATION
@@ -134,7 +128,6 @@ function make_player()
 
 end
 
--- 👤 ENEMY CREATION
 function make_enemy()
   local corner = flr(rnd(4))
   local positions = {
@@ -144,18 +137,20 @@ function make_enemy()
     {x=100, y=100},
   }
   local pos = positions[corner+1]
-	e = {
-		x = pos.x, y = pos.y, w = 7, h = 7,
-		dx = 0, dy = 0,
+  e = {
+    x = pos.x, y = pos.y, w = 7, h = 7,
+    dx = 0, dy = 0,
     speed = 1,
-    running_animation_speed = 1.0,
     sprite = 34,
-    flip_x = false
-	}
-
+    flip_x = false,
+    anim_timer = 0,          -- track time for animation
+    anim_speed = 1,       -- controls how fast frames change
+    anim_start = 34,
+    anim_end = 41
+  }
 end
 
--- 👤 ACORNh CREATION
+-- 👤 ACORN CREATION
 function spawn_acorn()
   x = flr(rnd(128-8)) -- subtract sprite size so it stays on-screen
   y = flr(rnd(128-8))
