@@ -1,17 +1,24 @@
 function _init()
   spawn_acorn()
-	make_player()
-  make_enemy()
+	spawn_player()
+  spawn_enemy(0.5)
 	particles = {}
   acorn_timer = 0
   enemy_timer = 0
   score = 0
+  level = 1
 end
 
 function _update()
+  if score >= 3 then
+    level = 2
+  elseif score >= 6 then 
+    level = 3 
+  end
   local dt = 1/30
   acorn_timer += dt
   enemy_timer += dt
+  local speed = 0.5
 
   if acorn_timer >= 4 then
     spawn_acorn()
@@ -19,14 +26,23 @@ function _update()
   end
 
   if enemy_timer >= 7 then
-    make_enemy()
+    if level >= 2 then
+      speed = 1
+    elseif level >= 3 then
+      speed = 1.5
+    end
+    spawn_enemy(speed)
     enemy_timer = 0
+  end
+
+  if acorn_timer and acorn_timer >= 2 and a then
+    a.idle_animation_speed = 1
   end
 
   if a then animate_acorn() end
   if e then update_enemy() end
 
-  animate_acorn()
+  -- make acorn blink when about to respawn
 	move_player()
   animate_player()
 
@@ -40,7 +56,7 @@ function _update()
 
 -- enemy grabs acorn
   if collides(e, a) then
-    sfx(1, 1)
+    sfx(2, 1)
     acorn_timer = 5
     enemy_timer = 5
     spawn_poof(e.x, e.y)
@@ -48,6 +64,7 @@ function _update()
     a = nil
     -- reset score if squirrel gets the acorn
     score = 0
+    level = 1
   end
 
 -- player catches enemy
@@ -68,19 +85,11 @@ function _draw()
   if e then spr(e.sprite, e.x, e.y, 1, 1, e.flip_x, false) end
   if a then spr(a.sprite, a.x, a.y, 1, 1, a.flip_x, false) end
 
-  print("SCORE: "..score, 1, 1, 7)
-  if e then print(e.dx) end
-  if e then print(e.dy) end
-  -- print(p.x)
-  -- print(p.y)
-  -- print(p.sprite)
-  -- print(p.running)
+  print("LEVEL: "..level, 0, 0, 14)
+  print("SCORE: "..score, 0, 5, 12)
 
 	-- draw particles after map, before UI
 	draw_particles()
-
-	-- debug + ui
-	-- debug_tiles(p.x, p.y)
 	draw_dash_cooldown()
 end
 
@@ -109,7 +118,7 @@ function update_enemy()
 end
 
 -- 👤 PLAYER CREATION
-function make_player()
+function spawn_player()
 	p = {
 		x = 24, y = 24, w = 7, h = 7,
 		dx = 0, dy = 0,
@@ -130,19 +139,19 @@ function make_player()
 
 end
 
-function make_enemy()
+function spawn_enemy(speed)
   local corner = flr(rnd(4))
   local positions = {
     {x=10, y=10},
     {x=100, y=10},
     {x=10, y=100},
-    {x=100, y=100},
+    {x=100, y=100}
   }
   local pos = positions[corner+1]
   e = {
     x = pos.x, y = pos.y, w = 7, h = 7,
     dx = 0, dy = 0,
-    speed = 1,
+    speed = speed,
     sprite = 34,
     flip_x = false,
     anim_timer = 0,          -- track time for animation
@@ -154,8 +163,8 @@ end
 
 -- 👤 ACORN CREATION
 function spawn_acorn()
-  x = flr(rnd(128-8)) -- subtract sprite size so it stays on-screen
-  y = flr(rnd(128-8))
+  x = flr(rnd(100-8)) -- subtract sprite size so it stays on-screen
+  y = flr(rnd(100-8))
 	a = {
 		x = x, y = y, w = 7, h = 7,
 		dx = 0, dy = 0,
@@ -212,6 +221,7 @@ function move_player()
 			p.cooldown_timer = p.dash_cooldown
 		else
 			-- spawn dash trail while active
+      sfx(4, 2)
 			spawn_dash_particle(p.x+4, p.y+4)
 		end
 	elseif p.cooldown_timer > 0 then
